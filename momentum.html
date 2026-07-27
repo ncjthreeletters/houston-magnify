@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PRAYERROOM</title>
+<style>
+  :root {
+    --white: #ffffff;
+    --white-dim: rgba(255, 255, 255, 0.55);
+    --bg: #000000;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    overflow: hidden;
+    overscroll-behavior: none;
+    font-family: "SF Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+
+  #stage {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    touch-action: pan-y;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    z-index: 1;
+    transition: opacity 1.1s cubic-bezier(0.22, 0.61, 0.36, 1), visibility 1.1s;
+  }
+
+  .slide.active {
+    opacity: 1;
+    visibility: visible;
+    z-index: 2;
+  }
+
+  .slide img {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: 100%;
+    object-fit: contain;
+    -webkit-user-drag: none;
+    user-select: none;
+    pointer-events: none;
+    transform: scale(1.035);
+    transition: transform 1.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+
+  .slide.active img {
+    transform: scale(1);
+  }
+
+  /* Slide 1: iMessage-style "message sent" entrance */
+  @keyframes imessage-in {
+    0% {
+      opacity: 0;
+      transform: translateY(46px) scale(0.82);
+    }
+    55% {
+      opacity: 1;
+      transform: translateY(-6px) scale(1.04);
+    }
+    75% {
+      transform: translateY(2px) scale(0.99);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .slide[data-index="0"] img {
+    transition: none;
+    opacity: 0;
+    transform: translateY(46px) scale(0.82);
+  }
+
+  .slide[data-index="0"].active img {
+    animation: imessage-in 1.1s cubic-bezier(0.32, 0.72, 0.33, 1.15) 0.35s both;
+  }
+
+  /* Arrow navigation */
+  .nav-arrow {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    width: 25%;
+    max-width: 140px;
+    display: flex;
+    align-items: center;
+    z-index: 10;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0;
+    opacity: 1;
+    transition: opacity 0.6s ease;
+  }
+
+  .nav-arrow.prev {
+    left: 0;
+    justify-content: flex-start;
+  }
+
+  .nav-arrow.next {
+    right: 0;
+    justify-content: flex-end;
+  }
+
+  .nav-arrow .icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.75);
+    margin: 0 18px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(3px);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.08);
+    transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+  }
+
+  .nav-arrow:hover .icon-wrap,
+  .nav-arrow:focus-visible .icon-wrap {
+    border-color: var(--white);
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow: 0 0 26px rgba(255, 255, 255, 0.18);
+  }
+
+  .nav-arrow:active .icon-wrap {
+    transform: scale(0.92);
+  }
+
+  .nav-arrow svg {
+    width: 22px;
+    height: 22px;
+    stroke: var(--white);
+    stroke-width: 1.75;
+    fill: none;
+  }
+
+  .nav-arrow.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .nav-arrow:focus-visible {
+    outline: none;
+  }
+  .nav-arrow:focus-visible .icon-wrap {
+    border-color: var(--white);
+  }
+
+  /* Progress dots */
+  #progress {
+    position: fixed;
+    bottom: max(22px, env(safe-area-inset-bottom));
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+
+  #progress .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.22);
+    transition: background 0.5s ease, transform 0.5s ease;
+  }
+
+  #progress .dot.active {
+    background: var(--white);
+    transform: scale(1.3);
+  }
+
+  @media (max-width: 600px) {
+    .nav-arrow { width: 22%; }
+    .nav-arrow .icon-wrap {
+      width: 48px;
+      height: 48px;
+      margin: 0 10px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div class="slide active" data-index="0"><img src="1.webp" alt="Prayer room welcome"></div>
+  <div class="slide" data-index="1"><img src="2_1.webp" alt="What the prayer room is"></div>
+  <div class="slide" data-index="2"><img src="3.webp" alt="What to do in a prayer room"></div>
+  <div class="slide" data-index="3"><img src="4.webp" alt="Prayer partners map"></div>
+  <div class="slide" data-index="4"><img src="5.webp" alt="Worship team map"></div>
+  <div class="slide" data-index="5"><img src="6.webp" alt="Lobby installation map"></div>
+  <div class="slide" data-index="6"><img src="7.webp" alt="Behold the Lamb"></div>
+</div>
+
+<button class="nav-arrow prev" id="prevBtn" aria-label="Previous">
+  <span class="icon-wrap">
+    <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </span>
+</button>
+
+<button class="nav-arrow next" id="nextBtn" aria-label="Next">
+  <span class="icon-wrap">
+    <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </span>
+</button>
+
+<div id="progress"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+  let transitioning = false;
+
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const progressEl = document.getElementById('progress');
+
+  // Build progress dots
+  slides.forEach((_, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    progressEl.appendChild(dot);
+  });
+  const dots = Array.from(progressEl.children);
+
+  function render() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === current));
+    dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    prevBtn.classList.toggle('hidden', current === 0);
+    nextBtn.classList.toggle('hidden', current === total - 1);
+  }
+
+  function goTo(index) {
+    if (index < 0 || index > total - 1 || index === current || transitioning) return;
+    transitioning = true;
+    current = index;
+    render();
+    // Match the CSS crossfade duration so rapid taps don't overlap transitions
+    setTimeout(() => { transitioning = false; }, 650);
+  }
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+
+  // Keyboard navigation
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') goTo(current + 1);
+    if (e.key === 'ArrowLeft') goTo(current - 1);
+  });
+
+  // Swipe navigation for touch devices
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  document.getElementById('stage').addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  document.getElementById('stage').addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].screenX - touchStartX;
+    const dy = e.changedTouches[0].screenY - touchStartY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) goTo(current + 1);
+      else goTo(current - 1);
+    }
+  }, { passive: true });
+
+  // Preload all images immediately for frictionless transitions
+  slides.forEach(s => {
+    const img = s.querySelector('img');
+    const preload = new Image();
+    preload.src = img.src;
+  });
+
+  render();
+</script>
+
+</body>
+</html>

@@ -15,8 +15,34 @@ const slides = [
 export default function MomentumPage() {
   const [current, setCurrent] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   const total = slides.length;
+
+  useEffect(() => {
+    setLoaded(true);
+
+    slides.forEach((slide) => {
+      const img = new Image();
+      img.src = slide.src;
+    });
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === " ") {
+        goTo(current + 1);
+      }
+
+      if (e.key === "ArrowLeft") {
+        goTo(current - 1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [current]);
 
   function goTo(index: number) {
     if (
@@ -35,29 +61,6 @@ export default function MomentumPage() {
       setTransitioning(false);
     }, 650);
   }
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === " ") {
-        goTo(current + 1);
-      }
-
-      if (e.key === "ArrowLeft") {
-        goTo(current - 1);
-      }
-    };
-
-    window.addEventListener("keydown", handleKey);
-
-    slides.forEach((slide) => {
-      const img = new Image();
-      img.src = slide.src;
-    });
-
-    return () => {
-      window.removeEventListener("keydown", handleKey);
-    };
-  }, [current]);
 
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchStartY, setTouchStartY] = useState(0);
@@ -142,6 +145,38 @@ export default function MomentumPage() {
           transform: scale(1);
         }
 
+        /* FIRST SLIDE ENTRANCE ANIMATION */
+        @keyframes imessage-in {
+          0% {
+            opacity: 0;
+            transform: translateY(46px) scale(0.82);
+          }
+
+          55% {
+            opacity: 1;
+            transform: translateY(-6px) scale(1.04);
+          }
+
+          75% {
+            transform: translateY(2px) scale(0.99);
+          }
+
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        .slide:first-child img {
+          opacity: 0;
+          transform: translateY(46px) scale(0.82);
+        }
+
+        .slide:first-child.active img {
+          animation: imessage-in 1.1s cubic-bezier(0.32, 0.72, 0.33, 1.15)
+            0.35s both;
+        }
+
         .arrow {
           position: fixed;
           top: 0;
@@ -154,6 +189,8 @@ export default function MomentumPage() {
           background: transparent;
           border: none;
           cursor: pointer;
+          padding: 0;
+          transition: opacity 0.6s ease;
         }
 
         .prev {
@@ -167,15 +204,16 @@ export default function MomentumPage() {
         }
 
         .icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
           width: 56px;
           height: 56px;
           border-radius: 50%;
           border: 1.5px solid rgba(255,255,255,.75);
           margin: 0 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
           background: rgba(255,255,255,.06);
+          backdrop-filter: blur(3px);
         }
 
         svg {
@@ -193,7 +231,7 @@ export default function MomentumPage() {
 
         #progress {
           position: fixed;
-          bottom: 22px;
+          bottom: max(22px, env(safe-area-inset-bottom));
           left: 50%;
           transform: translateX(-50%);
           display: flex;
@@ -206,6 +244,7 @@ export default function MomentumPage() {
           height: 6px;
           border-radius: 50%;
           background: rgba(255,255,255,.22);
+          transition: .5s ease;
         }
 
         .dot.active {
@@ -214,6 +253,10 @@ export default function MomentumPage() {
         }
 
         @media(max-width:600px){
+          .arrow {
+            width:22%;
+          }
+
           .icon {
             width:48px;
             height:48px;
@@ -225,7 +268,9 @@ export default function MomentumPage() {
       {slides.map((slide, index) => (
         <div
           key={slide.src}
-          className={`slide ${current === index ? "active" : ""}`}
+          className={`slide ${
+            current === index ? "active" : ""
+          }`}
         >
           <img src={slide.src} alt={slide.alt} />
         </div>
@@ -237,7 +282,7 @@ export default function MomentumPage() {
       >
         <span className="icon">
           <svg viewBox="0 0 24 24">
-            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </span>
       </button>
@@ -248,7 +293,7 @@ export default function MomentumPage() {
       >
         <span className="icon">
           <svg viewBox="0 0 24 24">
-            <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M9 18l6-6-6-6" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </span>
       </button>
@@ -257,7 +302,9 @@ export default function MomentumPage() {
         {slides.map((_, index) => (
           <div
             key={index}
-            className={`dot ${current === index ? "active" : ""}`}
+            className={`dot ${
+              current === index ? "active" : ""
+            }`}
           />
         ))}
       </div>

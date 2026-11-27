@@ -9,63 +9,64 @@ const MIN_GROUP_SIZE = 5;
 
 const CITIES = [
   {
-    id: "45014170003",
     name: "Sugar Land",
+    id: "45014170003",
     coordinates: [-95.6349, 29.6197],
   },
   {
-    id: "45014174003",
     name: "Missouri City",
+    id: "45014174003",
     coordinates: [-95.5377, 29.6186],
   },
   {
-    id: "45014175003",
     name: "Pearland",
+    id: "45014175003",
     coordinates: [-95.2860, 29.5636],
   },
   {
-    id: "45014176003",
     name: "Pasadena",
+    id: "45014176003",
     coordinates: [-95.2091, 29.6911],
   },
   {
-    id: "45014177003",
     name: "Spring",
+    id: "45014177003",
     coordinates: [-95.4172, 30.0799],
   },
   {
-    id: "45014178003",
     name: "Katy",
+    id: "45014178003",
     coordinates: [-95.8244, 29.7858],
+  },
+  {
+    name: "Other",
+    id: "45014180003",
+    coordinates: [-95.3698, 29.7604],
   },
 ];
 
-type Group = {
-  id: string;
-  name: string;
-  contactsCount: number;
-};
-
 export async function GET() {
+  const username = process.env.EZTEXTING_USERNAME;
+  const password = process.env.EZTEXTING_PASSWORD;
+
+  if (!username || !password) {
+    return NextResponse.json(
+      { status: "configuration_required" },
+      { status: 500 }
+    );
+  }
+
   try {
-    const username = process.env.EZTEXTING_USERNAME;
-    const password = process.env.EZTEXTING_PASSWORD;
-
-    if (!username || !password) {
-      return NextResponse.json(
-        { status: "configuration_required" },
-        { status: 500 }
-      );
-    }
-
     const auth = Buffer.from(
       `${username}:${password}`
     ).toString("base64");
 
-    const groups: Group[] = [];
-    let page = 0;
+    const groups = new Map<string, number>();
 
-    while (true) {
+    let page = 0;
+    let totalPages = 1;
+
+    do {
       const response = await fetch(
         `https://a.eztexting.com/v1/contact-groups?page=${page}&size=100`,
         {
@@ -78,57 +79,49 @@ export async function GET() {
       );
 
       if (!response.ok) {
-        console.error("EZ Texting status:", response.status);
         throw new Error("EZ Texting request failed");
       }
 
       const data = await response.json();
 
       if (!Array.isArray(data.content)) {
-        throw new Error("Invalid API response");
+        throw new Error("Unexpected API response");
       }
 
-      groups.push(...data.content);
+      for (const group of data.content) {
+        groups.set(
+          String(group.id),
+          Number(group.contactsCount ?? 0)
+        );
+      }
 
+      totalPages = Number(data.totalPages ?? 1);
       page++;
+    } while (page < totalPages && page < 20);
 
-      if (data.last || page >= data.totalPages) break;
-      if (page >= 20) throw new Error("Pagination limit");
-    }
-
-    const join = groups.find(
-      (group) => group.id === JOIN_GROUP
-    );
-
-    if (!join) {
+    if (!groups.has(JOIN_GROUP)) {
       throw new Error("Join group not found");
     }
 
-    const communityTotal = join.contactsCount;
+    const communityCount = groups.get(JOIN_GROUP)!;
 
-    const cityData = CITIES.map((city) => {
-      const group = groups.find(
-        (group) => group.id === city.id
-      );
+    const communityScale =
+      communityCount >= 5000 ? 5 :
+      communityCount >= 2000 ? 4 :
+      communityCount >= 1000 ? 3 :
+      communityCount >= 500 ? 2 : 1;
 
-      if (!group) {
-        throw new Error("Location group missing");
-      }
-
-      return {
-        ...city,
-        count: group.contactsCount,
-      };
-    })
-      .filter((city) => city.count >= MIN_GROUP_SIZE);
+    const eligibleCities = CITIES.map((city) => ({
+      ...city,
+      count: groups.get(city.id) ?? 0,
+    })).filter((city) => city.count >= MIN_GROUP_SIZE);
 
     const highestCount = Math.max(
       1,
-      ...cityData.map((city) => city.count)
+      ...eligibleCities.map((city) => city.count)
     );
 
-    // Convert private counts into five broad density levels.
-    const cities = cityData
+    const cities = eligibleCities
       .map((city) => ({
         name: city.name,
         coordinates: city.coordinates,
@@ -143,16 +136,10 @@ export async function GET() {
           a.name.localeCompare(b.name)
       );
 
-    // Reveal only broad community scale categories.
-    const communityScale =
-      communityTotal >= 5000 ? 5 :
-      communityTotal >= 2000 ? 4 :
-      communityTotal >= 1000 ? 3 :
-      communityTotal >= 500 ? 2 : 1;
-
     return NextResponse.json(
       {
         status: "connected",
+        communityCount,
         communityScale,
         cities,
         updatedAt: new Date().toISOString(),
@@ -174,4 +161,3 @@ export async function GET() {
     );
   }
 }
-
